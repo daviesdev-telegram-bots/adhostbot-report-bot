@@ -17,6 +17,7 @@ class User(base):
     balance = Column(Float, default=0)
     orders = relationship("Order")
 
+
 class Order(base):
     __tablename__ = "order"
     id = Column(Integer, primary_key=True)

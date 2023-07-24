@@ -7,6 +7,7 @@ general_kb.add(KeyboardButton("👤Account"), KeyboardButton("📞Support"))
 cancel_kb = InlineKeyboardMarkup()
 cancel_kb.add(InlineKeyboardButton("Cancel", callback_data="cancel"))
 
+
 def back_btn(step="back"):
     return InlineKeyboardButton("back", callback_data=step)
 
@@ -16,6 +17,6 @@ class Admin:
         return InlineKeyboardButton("back", callback_data="admin_" + step)
 
     kb = InlineKeyboardMarkup()
-    kb.add(InlineKeyboardButton("⌛Pending Orders", callback_data="admin_pending_orders"), InlineKeyboardButton("🚚 Shipped Orders", callback_data="admin_shipped_orders"))
+    kb.add(InlineKeyboardButton("⌛Pending Orders", callback_data="admin_pending_orders"),
+           InlineKeyboardButton("🚚 Shipped Orders", callback_data="admin_shipped_orders"))
     kb.add(back_btn())
-
