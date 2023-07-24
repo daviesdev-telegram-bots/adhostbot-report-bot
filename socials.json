@@ -1,0 +1,15 @@
+{
+  "Instagram": ["Account Report", "Post Report"],
+  "Twitter": ["Tweet Report", "User Report"],
+  "YouTube": ["Channel Report", "Video Report"],
+  "Facebook": ["Page Report", "Post Report"],
+  "TikTok": ["Account Report", "Video Report"],
+
+  "Telegram": ["Account Report", "Channel Report", "Message Report"],
+  "Twitch": ["Channel Report", "Live Report"],
+
+  "Discord": ["Channel Reports", "Account Reports"],
+  "Snapchat": ["Account Reports", "Story Reports"],
+
+  "Only fans": [" Page Report"]
+}
