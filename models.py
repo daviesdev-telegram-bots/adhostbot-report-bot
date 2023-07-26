@@ -22,6 +22,10 @@ class Order(base):
     __tablename__ = "order"
     id = Column(Integer, primary_key=True)
     delivered = Column(Boolean, default=False)
+    value = Column(Integer)
+    social_media = Column(String)
+    report_type = Column(String)
+    link = Column(String)
     timestamp = Column(DateTime, default=func.now())
     user = Column(String, ForeignKey("user.id"))
 

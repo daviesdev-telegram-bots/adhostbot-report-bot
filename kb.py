@@ -3,7 +3,8 @@ from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeybo
 
 general_kb = ReplyKeyboardMarkup()
 general_kb.add(KeyboardButton("🛍️Order Reports"))
-general_kb.add(KeyboardButton("👤Account"), KeyboardButton("📞Support"))
+general_kb.add(KeyboardButton("👤Account"), KeyboardButton("⏳Order History"))
+general_kb.add(KeyboardButton("📞Support"))
 cancel_kb = InlineKeyboardMarkup()
 cancel_kb.add(InlineKeyboardButton("Cancel", callback_data="cancel"))
 
