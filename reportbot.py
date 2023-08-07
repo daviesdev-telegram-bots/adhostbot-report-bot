@@ -14,7 +14,7 @@ load_dotenv()
 bot_token = os.getenv("bot_token")
 owners = json.loads(os.getenv("owners"))
 bot = TeleBot(bot_token, parse_mode="HTML")
-sellix = Sellix(os.getenv("sellix_secret"))
+sellix = Sellix(os.getenv("sellix_secret"), "banz")
 support = "https://t.me/GetReportz"
 admin_sellix_email = os.getenv("admin_sellix_email")
 bot_username = bot.get_me().username
@@ -69,7 +69,8 @@ def all_messages(message: Message):
                          f"<b>Welcome</b>.\n\n🪪Your ID: <code>{message.chat.id}</code>\n💲Balance: ${user.balance}",
                          reply_markup=kb)
     elif message.text == "⏳Order History":
-        orders = session.query(Order).filter_by(user=str(message.chat.id)).order_by(Order.timestamp.desc()).limit(5).all()
+        orders = session.query(Order).filter_by(user=str(message.chat.id)).order_by(
+            Order.timestamp.desc()).limit(5).all()
         text = []
         if len(orders) == 0:
             text.append("You have no orders yet")
@@ -78,8 +79,9 @@ def all_messages(message: Message):
             text.append(f"Time: {i.timestamp.strftime('%I:%M %p %d %b, %Y')}\n"
                         f"Social: <b>{i.social_media} - {i.report_type}</b>\nNumber of reports: {i.value}\n"
                         f"Link: {i.link}\nStatus: {'Delivered✅' if i.shipped else 'Pending⌛'}")
-        bot.send_message(message.chat.id, "<b>Order History</b>\n\n"+"\n\n".join(text))
-    
+        bot.send_message(
+            message.chat.id, "<b>Order History</b>\n\n"+"\n\n".join(text))
+
     if message.text == "📞Support":
         bot.send_message(message.chat.id, f"Contact support: {support}", reply_markup=InlineKeyboardMarkup(
         ).add(InlineKeyboardButton("📞Support", url=support)))
@@ -103,16 +105,11 @@ def callback_query_handler(callback: CallbackQuery):
     elif data.startswith("social:"):
         social = data.split(":")[1]
         kb = InlineKeyboardMarkup()
-        kb.add(*[InlineKeyboardButton(i, callback_data=f"order:{i}:100:{social}") for i in socials[social]])
+        kb.add(*[InlineKeyboardButton(i,
+               callback_data=f"order:{i}:100:{social}") for i in socials[social]])
         kb.add(InlineKeyboardButton("Back", callback_data="back_socials"))
         bot.send_photo(message.chat.id, open(f"images/{social.lower().replace(' ', '')}.{'png' if not social.lower() in ['tiktok', 'snapchat'] else 'jpg'}", "rb"),
                        f"Select the type of report you want to generate for {social}\n\n<i>$0.25 per report</i>", reply_markup=kb)
-
-    elif data.startswith(" "):
-        kb = InlineKeyboardMarkup()
-        kb.add(*[InlineKeyboardButton(i, callback_data=f"social:{i}") for i in socials])
-        bot.send_message(
-            message.chat.id, "What Social media do you want to order reports?", reply_markup=kb)
 
     elif data.startswith("order:") or data.startswith("plus:") or data.startswith("minus:"):
         report_type, value, social = data.split(":")[1:]
@@ -131,17 +128,22 @@ def callback_query_handler(callback: CallbackQuery):
         kb.add(InlineKeyboardButton(
             "Proceed", callback_data=f"proceed:{report_type}:{value}:{social}"))
         bot.edit_message_caption("How many reports do you want to generate",
-                              message.chat.id, message.id, reply_markup=kb)
+                                 message.chat.id, message.id, reply_markup=kb)
 
     elif data.startswith("proceed:"):
-        report_type, value, social = data.split(":")[1:]
+        data = data.replace("proceed:", "")
         bot.send_message(
-            message.chat.id, f"Send the link to the {social} account you want to generate reports for", reply_markup=cancel_kb)
+            message.chat.id, "Please select the violation in which the account being targeted best falls under.", reply_markup=report_kb(data))
+
+    elif data.startswith("violation:"):
+        social = data.split(":")[-1]
+        bot.edit_message_text(
+            f"Send the link to the {social} account you want to generate reports for", message.chat.id, message.id, reply_markup=cancel_kb)
         bot.register_next_step_handler(
             message, proceed_to_get_details, *data.split(":")[1:])
 
     elif data.startswith("pay:"):
-        report_type, value, social, link = data.split(":")[1:]
+        report_type, value, social, link, violation = data.split(":")[1:]
         user = get_user(message.chat.id)
         price = 0.25*int(value)
         if user.balance < price:
@@ -149,13 +151,14 @@ def callback_query_handler(callback: CallbackQuery):
                              reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("💵Top up", callback_data="self_add_balance")))
             return
         user.balance -= price
-        session.add(Order(user=user.id, value=value, report_type=report_type, social_media=social, link=link))
+        session.add(Order(user=user.id, value=value,
+                    report_type=report_type, social_media=social, link=link))
         session.commit()
         bot.edit_message_text(
-            f"Generating {value} reports for {report_type}.\n\n<i>This may take up to 48 hours</i>", message.chat.id, message.id)
+            f"Generating {value} {report_type} reports for {link}  on {social} because of violation of {report_violations[violation]}.\n\n<i>This may take up to 48 hours</i>", message.chat.id, message.id)
         for i in owners:
             bot.send_message(
-                i, f"New order\n\nUser: <code>{message.chat.id}</code>\nSocial: {social}\nReport Type: {report_type}\nReports: {value}\nLink: {link}")
+                i, f"New order\n\nUser: <code>{message.chat.id}</code>\nSocial: {social}\nReport Type: {report_type}\nViolation: {report_violations[violation]}\nReports: {value}\nLink: {link}")
 
     elif data == "cancel":
         edit_message_text(message, "Operation Cancelled!")
@@ -259,15 +262,15 @@ def is_cancel(message):
     return False
 
 
-def proceed_to_get_details(message, report_type, value, social):
+def proceed_to_get_details(message, violation, report_type, value, social):
     if is_cancel(message):
         return
     link = message.text
     kb = InlineKeyboardMarkup()
     kb.add(InlineKeyboardButton(
-        "Confirm", callback_data=f"pay:{report_type}:{value}:{social}:{link}"))
+        "Confirm", callback_data=f"pay:{report_type}:{value}:{social}:{link}:{violation}"))
     kb.add(InlineKeyboardButton("Cancel", callback_data="cancel"))
-    bot.send_message(message.chat.id, f"<b>Confirm your order</b>\n\n{social}: {report_type}\nReports: {report_type}\nLink: {link}"
+    bot.send_message(message.chat.id, f"<b>Confirm your order</b>\n\n{social}: {report_type}\nViolation: {report_violations[violation]}\nReports: {report_type}\nLink: {link}"
                      f"\n\n<i>Price: ${0.25*int(value)}\n$0.25 per report</i>", reply_markup=kb)
 
 
